@@ -1,0 +1,122 @@
+.translation-output-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.translation-output-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.translation-output-content {
+  width: 100%;
+  min-height: 120px;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #333;
+  overflow-y: auto;
+  transition: background-color 0.2s ease;
+}
+
+.translation-output-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.translation-output-empty {
+  color: #999;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 100px;
+}
+
+/* Loading animation styles */
+.translation-output-content.loading {
+  background-color: #f5f5f5;
+}
+
+.translation-output-placeholder {
+  padding: 0.5rem 0;
+}
+
+.translation-output-loading-line {
+  height: 1rem;
+  margin: 0.5rem 0;
+  background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+.translation-output-loading-line.short {
+  width: 60%;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.translation-output-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.copy-button {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  color: #333;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.copy-button:hover {
+  background-color: #e0e0e0;
+}
+
+.copy-icon {
+  margin-right: 0.4rem;
+  font-size: 1rem;
+}
+
+.copy-icon.success {
+  color: #52c41a;
+}
+
+.character-count {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+/* RTL support */
+[dir="rtl"] .translation-output-text {
+  text-align: right;
+}
+
+[dir="rtl"] .copy-icon {
+  margin-right: 0;
+  margin-left: 0.4rem;
+}

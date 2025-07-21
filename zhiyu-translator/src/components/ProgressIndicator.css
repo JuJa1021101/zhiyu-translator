@@ -1,0 +1,163 @@
+.progress-indicator {
+  --progress-color: #646cff;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+/* Linear progress styles */
+.linear-indicator {
+  gap: 0.5rem;
+}
+
+.linear-progress-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.linear-progress-bar {
+  height: 8px;
+  background-color: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.linear-progress-fill {
+  height: 100%;
+  background-color: var(--progress-color);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+/* Animated gradient effect for linear progress */
+.linear-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0) 100%);
+  animation: shimmer 1.5s infinite;
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Circular progress styles */
+.circular-indicator {
+  align-items: center;
+}
+
+.circular-progress-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.circular-progress {
+  width: 100px;
+  height: 100px;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.circular-progress-background {
+  stroke: #eee;
+}
+
+.circular-progress-fill {
+  stroke: var(--progress-color);
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+.circular-progress-text {
+  fill: var(--progress-color);
+  font-size: 16px;
+  font-weight: bold;
+  transform: rotate(90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Progress message styles */
+.progress-message {
+  color: #666;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.progress-percentage {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+/* Size variations */
+.progress-small .linear-progress-bar {
+  height: 4px;
+}
+
+.progress-small .circular-progress {
+  width: 60px;
+  height: 60px;
+}
+
+.progress-small .circular-progress-text {
+  font-size: 12px;
+}
+
+.progress-large .linear-progress-bar {
+  height: 12px;
+}
+
+.progress-large .circular-progress {
+  width: 120px;
+  height: 120px;
+}
+
+.progress-large .circular-progress-text {
+  font-size: 20px;
+}
+
+/* Animation for indeterminate progress */
+@keyframes indeterminate {
+  0% {
+    left: -35%;
+    right: 100%;
+  }
+
+  60% {
+    left: 100%;
+    right: -90%;
+  }
+
+  100% {
+    left: 100%;
+    right: -90%;
+  }
+}
+
+.linear-progress-bar.indeterminate .linear-progress-fill {
+  position: absolute;
+  width: 100%;
+  animation: indeterminate 1.5s infinite cubic-bezier(0.65, 0.815, 0.735, 0.395);
+}
