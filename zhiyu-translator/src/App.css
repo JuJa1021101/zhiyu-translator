@@ -83,6 +83,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
+  align-items: stretch;
+  /* 确保两个面板高度一致 */
 }
 
 @media (max-width: 768px) {
@@ -95,7 +97,21 @@
 .output-panel {
   display: flex;
   flex-direction: column;
-  min-height: 200px;
+  min-height: 300px;
+  /* 增加最小高度，提供更好的用户体验 */
+  height: 100%;
+  /* 确保两个面板高度相同 */
+}
+
+/* 确保输入框和输出框具有相同的样式和大小 */
+.input-panel>*:first-child,
+.output-panel>*:first-child {
+  flex: 1;
+  /* 让输入框和输出框占据相同的空间 */
+  min-height: 250px;
+  /* 设置相同的最小高度 */
+  resize: vertical;
+  /* 允许垂直调整大小 */
 }
 
 /* Translation controls */
@@ -318,6 +334,66 @@
 .error-recovery-button:hover {
   background-color: #535bf2;
   transform: translateY(-2px);
+}
+
+/* Translation pending indicator */
+.translation-pending {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.pending-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #646cff;
+  font-size: 0.9rem;
+}
+
+.pending-dots {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pending-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #646cff;
+  animation: pending-pulse 1.4s infinite ease-in-out both;
+}
+
+.pending-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.pending-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.pending-dots span:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes pending-pulse {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pending-text {
+  font-weight: 500;
 }
 
 /* Keyboard shortcuts help button */

@@ -99,7 +99,7 @@ export default function useTranslationService() {
     }
   }, [state.sourceLanguage, state.targetLanguage]);
 
-  // Translation function
+  // Translation function - 无状态实时翻译，仿有道词典体验
   const translate = useCallback(async (options?: TranslationOptions) => {
     if (!state.inputText.trim() || !state.isServiceReady || !serviceRef.current) {
       if (!state.inputText.trim()) {
@@ -108,36 +108,51 @@ export default function useTranslationService() {
       return;
     }
 
-    // Cancel any pending translation
+    // 静默取消任何正在进行的翻译，不显示状态变化
     if (currentRequestId.current) {
       await serviceRef.current.cancelTranslation()
         .catch(console.error);
     }
 
-    // Generate a new request ID
+    // 生成新的请求ID
     currentRequestId.current = `translate-${Date.now()}`;
 
-    dispatch({ type: 'START_TRANSLATION' });
-
     try {
-      console.log('Using Youdao translation service for professional translation');
+      // 对于自动翻译模式，我们需要确保翻译结果是实时的
+      const isAutoTranslate = state.settings.autoTranslate;
 
+      // 直接翻译，不设置任何中间状态
       const result = await serviceRef.current.translate(
         state.inputText,
         state.sourceLanguage,
         state.targetLanguage
       );
 
-      dispatch({ type: 'FINISH_TRANSLATION', payload: result });
+      // 确保结果不是空的或者只是带前缀的原文
+      const isValidResult = result &&
+        !result.startsWith(`【${state.targetLanguage}翻译】`) &&
+        !result.startsWith(`[${state.targetLanguage.toUpperCase()}]`);
+
+      // 直接设置结果，不经过中间状态
+      if (isValidResult) {
+        dispatch({ type: 'SET_TRANSLATED_TEXT', payload: result });
+      } else if (!isAutoTranslate) {
+        // 如果不是自动翻译模式，且结果无效，至少显示一些内容
+        dispatch({ type: 'SET_TRANSLATED_TEXT', payload: result || '翻译失败，请重试' });
+      }
     } catch (err: any) {
-      // Format error message for display
-      const errorMessage = err instanceof Error ? err.message : 'Translation failed';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      // 静默处理错误，不显示错误状态
       console.error('Translation error:', err);
+
+      // 如果不是自动翻译模式，显示错误信息
+      if (!state.settings.autoTranslate) {
+        const errorMessage = err instanceof Error ? err.message : '翻译失败，请重试';
+        dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      }
     } finally {
       currentRequestId.current = null;
     }
-  }, [state.inputText, state.sourceLanguage, state.targetLanguage, state.isServiceReady]);
+  }, [state.inputText, state.sourceLanguage, state.targetLanguage, state.isServiceReady, state.settings.autoTranslate]);
 
   // Cancel current translation
   const cancelTranslation = useCallback(async () => {

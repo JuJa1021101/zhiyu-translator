@@ -35,14 +35,16 @@
 
 .translation-textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 250px;
+  /* 增加最小高度以匹配输出框 */
   padding: 0.75rem;
   border: none;
   background: transparent;
   font-size: 1rem;
   line-height: 1.5;
   color: #333;
-  resize: none;
+  resize: vertical;
+  /* 允许垂直调整大小 */
   outline: none;
   font-family: inherit;
 }

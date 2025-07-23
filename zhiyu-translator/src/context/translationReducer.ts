@@ -11,8 +11,8 @@ export const initialState: AppState = {
   error: null,
   isServiceReady: false,
   settings: {
-    autoTranslate: false,
-    debounceMs: 500,
+    autoTranslate: true, // 默认开启自动翻译
+    debounceMs: 150, // 减少防抖时间到150ms，实现更接近有道词典的实时翻译体验
     useQuantized: true,
     cacheModels: true,
     theme: 'system'
@@ -77,8 +77,10 @@ export function translationReducer(state: AppState, action: TranslationAction): 
       return {
         ...state,
         inputText: action.payload,
-        // Clear translation when input changes
-        translatedText: state.settings.autoTranslate ? state.translatedText : ''
+        // 只有在自动翻译关闭时才清空翻译结果，避免频繁清空影响用户体验
+        translatedText: state.settings.autoTranslate ? state.translatedText : '',
+        // 如果正在翻译且输入发生变化，重置进度
+        progress: state.isTranslating ? 0 : state.progress
       };
 
     case 'SET_TRANSLATED_TEXT':
@@ -90,8 +92,8 @@ export function translationReducer(state: AppState, action: TranslationAction): 
     case 'START_TRANSLATION':
       return {
         ...state,
-        isTranslating: true,
-        progress: 0,
+        // 完全无状态翻译，不设置任何中间状态
+        isTranslating: false,
         error: null
       };
 
@@ -99,15 +101,13 @@ export function translationReducer(state: AppState, action: TranslationAction): 
       return {
         ...state,
         isTranslating: false,
-        translatedText: action.payload,
-        progress: 100
+        translatedText: action.payload
       };
 
     case 'CANCEL_TRANSLATION':
       return {
         ...state,
-        isTranslating: false,
-        progress: 0
+        isTranslating: false
       };
 
     case 'SET_PROGRESS':
@@ -134,6 +134,8 @@ export function translationReducer(state: AppState, action: TranslationAction): 
         ...state,
         isServiceReady: action.payload
       };
+
+
 
     case 'UPDATE_SETTINGS':
       return {

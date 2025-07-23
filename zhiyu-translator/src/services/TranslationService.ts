@@ -38,9 +38,9 @@ interface QueuedTranslationRequest {
 }
 
 export class TranslationService {
-  private worker: Worker;
-  private messageChannel: MessageChannel;
-  private port: MessagePort;
+  private worker: Worker | null = null;
+  private messageChannel: MessageChannel | null = null;
+  private port: MessagePort | null = null;
   private requestMap: Map<string, {
     resolve: (value: TranslationResponse) => void;
     reject: (reason: any) => void;
@@ -486,8 +486,10 @@ export class TranslationService {
     try {
       if (this.port) {
         this.port.postMessage(message);
-      } else {
+      } else if (this.worker) {
         this.worker.postMessage(message);
+      } else {
+        throw new Error('Neither port nor worker is initialized');
       }
     } catch (error) {
       this.logger.error(`[TranslationService] Failed to send message to worker:`, error);

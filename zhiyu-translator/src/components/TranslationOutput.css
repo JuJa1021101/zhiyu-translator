@@ -14,9 +14,11 @@
 
 .translation-output-content {
   width: 100%;
-  min-height: 120px;
+  min-height: 250px;
+  /* 匹配输入框的最小高度 */
   padding: 0.75rem;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #ccc;
+  /* 使用与输入框相同的边框颜色 */
   border-radius: 4px;
   background-color: #f9f9f9;
   font-size: 1rem;
@@ -24,6 +26,9 @@
   color: #333;
   overflow-y: auto;
   transition: background-color 0.2s ease;
+  display: flex;
+  /* 使用 flex 布局以便更好地控制内容 */
+  flex-direction: column;
 }
 
 .translation-output-text {
@@ -37,8 +42,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  min-height: 100px;
+  flex: 1;
+  /* 占据剩余空间 */
+  min-height: 200px;
+  /* 确保有足够的高度 */
 }
 
 /* Loading animation styles */

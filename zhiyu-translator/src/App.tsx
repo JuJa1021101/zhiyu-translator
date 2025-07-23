@@ -152,12 +152,10 @@ const App: React.FC = () => {
     dispatch({ type: 'SET_INPUT_TEXT', payload: text });
   }, [dispatch]);
 
-  // Handle translation
+  // Handle translation - 无状态直接翻译
   const handleTranslate = useCallback(() => {
-    const perfMark = measurePerformance('translation-request');
-    translate()
-      .then(() => perfMark.end())
-      .catch(() => perfMark.end());
+    // 直接翻译，不显示任何中间状态
+    translate();
   }, [translate]);
 
   // Handle translation cancellation
@@ -197,22 +195,29 @@ const App: React.FC = () => {
     }
   }, [contextError, reportError]);
 
-  // Auto-translate with debounce when service is ready if there's input text
+  // 实时自动翻译逻辑 - 完全仿有道词典体验，无中间状态
   useEffect(() => {
-    if (isServiceReady && inputText.trim() && settings.autoTranslate) {
-      // Use debounce to prevent too many translation requests
-      const debouncedTranslate = debounce(() => {
-        translate();
-      }, settings.debounceMs || 2000); // Increase debounce time for better performance
-
-      debouncedTranslate();
-
-      // Cleanup function to cancel any pending debounced calls when component unmounts or dependencies change
-      return () => {
-        // The debounce function will handle clearing the timeout
-      };
+    // 如果不满足自动翻译条件，直接退出
+    if (!settings.autoTranslate || !isServiceReady || !inputText.trim()) {
+      // 如果输入为空，清空翻译结果
+      if (settings.autoTranslate && !inputText.trim()) {
+        dispatch({ type: 'SET_TRANSLATED_TEXT', payload: '' });
+      }
+      return;
     }
-  }, [isServiceReady, inputText, settings.autoTranslate, settings.debounceMs, translate]);
+
+    // 使用极短的防抖时间，实现即时翻译体验
+    const debounceTime = settings.debounceMs || 150; // 150ms防抖，更接近有道词典的即时响应
+    const debouncedTranslateTimeout = setTimeout(() => {
+      // 直接调用翻译，不设置任何中间状态
+      translate();
+    }, debounceTime);
+
+    // 清理函数
+    return () => {
+      clearTimeout(debouncedTranslateTimeout);
+    };
+  }, [inputText, sourceLanguage, targetLanguage, settings.autoTranslate, settings.debounceMs, isServiceReady, translate, dispatch]);
 
   // Loading state
   if (isInitializing) {
@@ -267,14 +272,14 @@ const App: React.FC = () => {
                   onChange={handleSetSourceLanguage}
                   languages={SUPPORTED_LANGUAGES}
                   label="源语言"
-                  disabled={isTranslating}
+                  disabled={false}
                   testId="source-language-selector"
                 />
 
                 <button
                   className="swap-languages-button"
                   onClick={handleSwapLanguages}
-                  disabled={isTranslating}
+                  disabled={false}
                   aria-label="交换语言"
                   title="交换语言"
                 >
@@ -286,7 +291,7 @@ const App: React.FC = () => {
                   onChange={handleSetTargetLanguage}
                   languages={SUPPORTED_LANGUAGES}
                   label="目标语言"
-                  disabled={isTranslating}
+                  disabled={false}
                   testId="target-language-selector"
                 />
               </div>
@@ -297,7 +302,7 @@ const App: React.FC = () => {
                     value={inputText}
                     onChange={handleSetInputText}
                     placeholder="输入要翻译的文本..."
-                    disabled={isTranslating}
+                    disabled={false}
                     autoFocus
                     testId="translation-input"
                   />
@@ -309,7 +314,7 @@ const App: React.FC = () => {
                 <div className="output-panel">
                   <TranslationOutput
                     value={translatedText}
-                    isLoading={isTranslating}
+                    isLoading={false}
                     showCopyButton={true}
                     testId="translation-output"
                   />
@@ -320,33 +325,14 @@ const App: React.FC = () => {
               </div>
 
               <div className="translation-controls">
-                {isTranslating ? (
-                  <>
-                    <ProgressIndicator
-                      progress={progress}
-                      message="翻译中..."
-                      isVisible={isTranslating}
-                      variant="linear"
-                      testId="translation-progress"
-                    />
-                    <button
-                      className="cancel-button"
-                      onClick={handleCancelTranslation}
-                      aria-label="取消翻译"
-                    >
-                      取消
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className="translate-button"
-                    onClick={handleTranslate}
-                    disabled={!inputText.trim() || !isServiceReady}
-                    aria-label="翻译"
-                  >
-                    翻译
-                  </button>
-                )}
+                <button
+                  className="translate-button"
+                  onClick={handleTranslate}
+                  disabled={!inputText.trim() || !isServiceReady}
+                  aria-label="翻译"
+                >
+                  翻译
+                </button>
               </div>
 
               <div className="settings-panel">
@@ -355,7 +341,7 @@ const App: React.FC = () => {
                     type="checkbox"
                     checked={settings.autoTranslate}
                     onChange={handleToggleAutoTranslate}
-                    disabled={isTranslating}
+                    disabled={false}
                   />
                   <span>自动翻译</span>
                 </label>
