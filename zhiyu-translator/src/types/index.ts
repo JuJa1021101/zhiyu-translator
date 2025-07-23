@@ -12,6 +12,15 @@ export interface AppState {
   isTranslating: boolean;
   progress: number;
   error: string | null;
+  isServiceReady: boolean;
+  settings: {
+    autoTranslate: boolean;
+    debounceMs: number;
+    useQuantized: boolean;
+    cacheModels: boolean;
+    theme: 'light' | 'dark' | 'system';
+  };
+  serviceConfig: TranslationServiceConfig;
 }
 
 // Translation options type

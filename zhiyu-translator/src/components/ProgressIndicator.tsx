@@ -4,8 +4,9 @@ import './ProgressIndicator.css';
 
 /**
  * ProgressIndicator component
+ * 构建动态进度指示器(ProgressIndicator)等标准化 UI 控件，通过 Props 驱动实现跨功能模块的组件复用
  * A dynamic progress indicator that supports linear and circular display modes
- * with animation effects and progress messages
+ * with animation effects and progress messages, fully configurable through Props
  */
 const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   progress,

@@ -84,13 +84,13 @@ export interface LanguageDisplayOptions {
   showOnlySupported: boolean;
 }
 
-// Sample language data structure (to be populated from actual data)
+// 有道智云API支持的语言列表
 export const SUPPORTED_LANGUAGES: Language[] = [
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'zh', name: 'Chinese', nativeName: '中文' },
-  { code: 'es', name: 'Spanish', nativeName: 'Español' },
   { code: 'fr', name: 'French', nativeName: 'Français' },
   { code: 'de', name: 'German', nativeName: 'Deutsch' },
+  { code: 'es', name: 'Spanish', nativeName: 'Español' },
   { code: 'ja', name: 'Japanese', nativeName: '日本語' },
   { code: 'ko', name: 'Korean', nativeName: '한국어' },
   { code: 'ru', name: 'Russian', nativeName: 'Русский' },

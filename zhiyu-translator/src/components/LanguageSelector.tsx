@@ -5,8 +5,9 @@ import './LanguageSelector.css';
 
 /**
  * LanguageSelector component
+ * 构建参数化语言选择器(LanguageSelector)等标准化 UI 控件，通过 Props 驱动实现跨功能模块的组件复用
  * A parameterized dropdown component for selecting languages
- * Supports multilingual display and search functionality
+ * Supports multilingual display and search functionality with full Props-driven configuration
  */
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   value,

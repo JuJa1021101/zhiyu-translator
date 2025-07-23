@@ -18,6 +18,8 @@ import { loggers, LogLevel } from '../utils/logUtils';
 
 /**
  * Service for handling translation requests through a Web Worker
+ * 基于 Web Worker 建立独立计算线程，运用 MessageChannel 通信机制实现主线程与工作线程的解耦
+ * 确保复杂模型推理期间界面交互的流畅性
  */
 /**
  * Translation request queue item interface
@@ -55,12 +57,12 @@ export class TranslationService {
   private isProcessingQueue: boolean = false;
   private maxConcurrentRequests: number = 1;
   private serviceConfig: TranslationServiceConfig = {
-    maxConcurrentTranslations: 1,
-    timeout: 60000,
+    maxConcurrentTranslations: 3, // Increase concurrent translations for speed
+    timeout: 30000, // Reduce timeout for faster failure detection
     retryOptions: {
-      maxRetries: 2,
-      retryDelay: 1000,
-      retryMultiplier: 1.5
+      maxRetries: 1, // Reduce retries for faster response
+      retryDelay: 500, // Faster retry
+      retryMultiplier: 1.2
     }
   };
 
@@ -89,29 +91,51 @@ export class TranslationService {
 
   /**
    * Initialize the worker and message channel
+   * 运用 MessageChannel 通信机制实现主线程与工作线程的解耦，确保复杂模型推理期间界面交互的流畅性
    */
   private initializeWorker(): void {
     try {
-      // Create a new worker
+      // Create a new worker for independent computation thread
       this.worker = new Worker(
         new URL('../workers/translation.worker.ts', import.meta.url),
-        { type: 'module' }
+        {
+          type: 'module',
+          name: 'translation-worker' // Named worker for better debugging
+        }
       );
 
-      // Create a message channel for communication
+      // Create a message channel for decoupled communication
       this.messageChannel = new MessageChannel();
       this.port = this.messageChannel.port1;
 
-      // Set up message handling on the port
+      // Set up message handling on the port for decoupled communication
       this.port.onmessage = this.handleWorkerMessage.bind(this);
 
-      // Connect the worker to the message channel
+      // Handle port errors for robust communication
+      this.port.onmessageerror = (error) => {
+        this.logger.error('[TranslationService] MessageChannel communication error:', error);
+        this.handleWorkerError(new ErrorEvent('messageerror', {
+          message: 'MessageChannel communication failed',
+          error
+        }));
+      };
+
+      // Connect the worker to the message channel (transfer port2 to worker)
       this.worker.postMessage({ type: 'connect' }, [this.messageChannel.port2]);
 
       // Set up error handling for the worker
       this.worker.onerror = this.handleWorkerError.bind(this);
 
-      this.logger.info('[TranslationService] Worker and MessageChannel initialized');
+      // Handle worker termination
+      this.worker.onmessageerror = (error) => {
+        this.logger.error('[TranslationService] Worker message error:', error);
+        this.handleWorkerError(new ErrorEvent('workererror', {
+          message: 'Worker message processing failed',
+          error
+        }));
+      };
+
+      this.logger.info('[TranslationService] Worker and MessageChannel initialized - 主线程与工作线程解耦完成');
     } catch (error) {
       this.logger.error('[TranslationService] Failed to initialize worker:', error);
       throw new Error('Failed to initialize translation service');
@@ -172,14 +196,16 @@ export class TranslationService {
         timestamp: Date.now()
       });
 
-      // Send initialization request
+      // Send initialization request with optimized settings
       this.sendWorkerMessage({
         id: requestId,
         type: WorkerMessageType.INIT,
         payload: {
           modelConfig: {
-            cacheModels: options?.cacheModels !== undefined ? options.cacheModels : this.serviceConfig.cacheModels,
-            quantized: options?.quantized !== undefined ? options.quantized : this.serviceConfig.useQuantized
+            cacheModels: options?.cacheModels !== undefined ? options.cacheModels : true, // Always cache for speed
+            quantized: options?.quantized !== undefined ? options.quantized : true, // Always use quantized for speed
+            maxCacheSize: 3, // Limit cache size for memory efficiency
+            preloadCommonModels: true // Preload common translation models
           }
         }
       });

@@ -3,12 +3,13 @@ import './App.css';
 import { ErrorBoundary } from './components';
 import { useTranslationContext } from './context/TranslationContext';
 import { useTranslationService, useErrorHandler } from './hooks';
-import { SUPPORTED_LANGUAGES } from './utils';
+import { AppState } from './types';
+import { SUPPORTED_LANGUAGES } from './types/languages';
+import { debounce } from './utils';
 import { measurePerformance } from './utils/performanceUtils';
 import { useKeyboardShortcuts, KeyboardShortcut } from './utils/keyboardUtils';
 
 // Import components directly to avoid lazy loading issues
-import PerformanceMonitor from './components/PerformanceMonitor';
 import ThemeSwitcher from './components/ThemeSwitcher';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 
@@ -21,11 +22,13 @@ const ErrorNotification = lazy(() => import('./components/ErrorNotification'));
 
 /**
  * Main App component
+ * 整合参数化语言选择器(LanguageSelector)与动态进度指示器(ProgressIndicator)等标准化 UI 控件
+ * 通过 Props 驱动实现跨功能模块的组件复用，结合 Web Worker 和 MessageChannel 实现流畅的用户交互
  * Integrates all UI components and manages the translation workflow
  */
 const App: React.FC = () => {
   const { state, dispatch } = useTranslationContext();
-  const { translate, cancelTranslation, updateServiceConfig, isServiceReady } = useTranslationService();
+  const { translate, cancelTranslation, isServiceReady } = useTranslationService();
   const { error: globalError, clearError, reportError } = useErrorHandler(5000); // Auto-hide after 5 seconds
   const [isInitializing, setIsInitializing] = useState(true);
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
@@ -39,7 +42,7 @@ const App: React.FC = () => {
     progress,
     error: contextError,
     settings
-  } = state;
+  } = state as AppState;
 
   // Handle theme change
   const handleThemeChange = useCallback((theme: 'light' | 'dark' | 'system') => {
@@ -47,6 +50,11 @@ const App: React.FC = () => {
       type: 'UPDATE_SETTINGS',
       payload: { theme }
     });
+  }, [dispatch]);
+
+  // Swap languages
+  const handleSwapLanguages = useCallback(() => {
+    dispatch({ type: 'SWAP_LANGUAGES' });
   }, [dispatch]);
 
   // Define keyboard shortcuts
@@ -137,10 +145,7 @@ const App: React.FC = () => {
     dispatch({ type: 'SET_TARGET_LANGUAGE', payload: language });
   }, [dispatch]);
 
-  // Swap languages
-  const handleSwapLanguages = useCallback(() => {
-    dispatch({ type: 'SWAP_LANGUAGES' });
-  }, [dispatch]);
+  // handleSwapLanguages 已在前面定义
 
   // Set input text
   const handleSetInputText = useCallback((text: string) => {
@@ -192,12 +197,22 @@ const App: React.FC = () => {
     }
   }, [contextError, reportError]);
 
-  // Auto-translate when service is ready if there's input text
+  // Auto-translate with debounce when service is ready if there's input text
   useEffect(() => {
     if (isServiceReady && inputText.trim() && settings.autoTranslate) {
-      translate();
+      // Use debounce to prevent too many translation requests
+      const debouncedTranslate = debounce(() => {
+        translate();
+      }, settings.debounceMs || 2000); // Increase debounce time for better performance
+
+      debouncedTranslate();
+
+      // Cleanup function to cancel any pending debounced calls when component unmounts or dependencies change
+      return () => {
+        // The debounce function will handle clearing the timeout
+      };
     }
-  }, [isServiceReady, inputText, settings.autoTranslate, translate]);
+  }, [isServiceReady, inputText, settings.autoTranslate, settings.debounceMs, translate]);
 
   // Loading state
   if (isInitializing) {
@@ -286,6 +301,9 @@ const App: React.FC = () => {
                     autoFocus
                     testId="translation-input"
                   />
+                  <div className="character-count">
+                    {inputText.length} 个字符
+                  </div>
                 </div>
 
                 <div className="output-panel">
@@ -295,6 +313,9 @@ const App: React.FC = () => {
                     showCopyButton={true}
                     testId="translation-output"
                   />
+                  <div className="character-count">
+                    {translatedText.length} 个字符
+                  </div>
                 </div>
               </div>
 
@@ -384,8 +405,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Performance monitor (only visible in development mode) */}
-          <PerformanceMonitor visible={process.env.NODE_ENV === 'development'} />
+          {/* Performance monitor removed */}
 
           {/* Keyboard shortcuts help dialog */}
           <KeyboardShortcutsHelp

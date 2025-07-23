@@ -111,8 +111,10 @@ function splitTextIntoChunks(text: string, chunkSize: number = 500): string[] {
   return chunks;
 }
 
+// 基于 Web Worker 建立独立计算线程，运用 MessageChannel 通信机制实现主线程与工作线程的解耦
 // Communication ports for MessageChannel
 let mainPort: MessagePort | null = null;
+let isChannelConnected = false;
 
 // Handle translate requests
 async function handleTranslateRequest(request: TranslateWorkerRequest): Promise<void> {
@@ -165,6 +167,7 @@ async function handleTranslateRequest(request: TranslateWorkerRequest): Promise<
     // Create abort controller for this request
     const abortController = new AbortController();
 
+    // 采用全局单例模式管理模型管道(pipeline)，通过共享模型实例避免重复加载造成的计算资源浪费
     // Get the translation pipeline with progress tracking
     WorkerLogger.info(`Loading translation model: ${modelId}`);
     const translator = await modelManager.getPipeline(
@@ -188,32 +191,86 @@ async function handleTranslateRequest(request: TranslateWorkerRequest): Promise<
       }
     });
 
-    // For long text, split into chunks and translate with progress updates
-    const chunks = splitTextIntoChunks(text, 500); // Split into chunks of ~500 chars
-    let translatedText = '';
-    const totalChunks = chunks.length;
-
+    // Optimize translation for speed
     const startTime = performance.now();
+    let translatedText = '';
 
-    for (let i = 0; i < chunks.length; i++) {
-      // Send progress update for each chunk
-      const chunkProgress = Math.floor((i / totalChunks) * 100);
+    // For shorter text (< 1000 chars), translate directly without chunking for speed
+    if (text.length < 1000) {
+      WorkerLogger.info(`Translating text directly (${text.length} chars)`);
+
+      // Send progress update
       sendResponse({
         id,
         type: WorkerResponseType.PROGRESS,
         payload: {
           type: 'translating',
-          progress: chunkProgress,
-          message: `Translating part ${i + 1} of ${totalChunks}...`
+          progress: 50,
+          message: 'Translating...'
         }
       });
 
-      // Translate the chunk
-      const chunkResult = await translator(chunks[i], options);
-      translatedText += chunkResult[0].translation_text + ' ';
+      // Translate the entire text at once for better speed
+      const result = await translator(text, {
+        ...options,
+        max_length: 512, // Limit output length for speed
+        num_beams: 1, // Use greedy decoding for speed
+        do_sample: false, // Disable sampling for consistency and speed
+        early_stopping: true // Enable early stopping
+      });
 
-      // Small delay to allow for UI updates and prevent blocking
-      await new Promise(resolve => setTimeout(resolve, 0));
+      translatedText = result[0].translation_text;
+    } else {
+      // For longer text, use optimized chunking
+      const chunks = splitTextIntoChunks(text, 800); // Larger chunks for better context
+      const totalChunks = chunks.length;
+
+      WorkerLogger.info(`Translating ${totalChunks} chunks for long text (${text.length} chars)`);
+
+      // Process chunks in parallel for better speed (limit to 2 concurrent)
+      const maxConcurrent = Math.min(2, totalChunks);
+      const results: string[] = new Array(totalChunks);
+
+      for (let i = 0; i < totalChunks; i += maxConcurrent) {
+        const batch = chunks.slice(i, i + maxConcurrent);
+        const batchPromises = batch.map(async (chunk, batchIndex) => {
+          const chunkIndex = i + batchIndex;
+
+          // Send progress update
+          const progress = Math.floor((chunkIndex / totalChunks) * 100);
+          sendResponse({
+            id,
+            type: WorkerResponseType.PROGRESS,
+            payload: {
+              type: 'translating',
+              progress,
+              message: `Translating part ${chunkIndex + 1} of ${totalChunks}...`
+            }
+          });
+
+          // Translate chunk with optimized settings
+          const chunkResult = await translator(chunk, {
+            ...options,
+            max_length: 512,
+            num_beams: 1,
+            do_sample: false,
+            early_stopping: true
+          });
+
+          return { index: chunkIndex, text: chunkResult[0].translation_text };
+        });
+
+        // Wait for batch to complete
+        const batchResults = await Promise.all(batchPromises);
+
+        // Store results in correct order
+        batchResults.forEach(({ index, text }) => {
+          results[index] = text;
+        });
+      }
+
+      // Combine all results
+      translatedText = results.join(' ');
     }
 
     const endTime = performance.now();
@@ -371,34 +428,63 @@ function handleCancelRequest(request: CancelWorkerRequest): void {
 }
 
 // Send response through the appropriate channel
+// 运用 MessageChannel 通信机制实现主线程与工作线程的解耦，确保复杂模型推理期间界面交互的流畅性
 function sendResponse(response: WorkerResponse): void {
-  if (mainPort) {
-    mainPort.postMessage(response);
-  } else {
-    self.postMessage(response);
+  try {
+    if (mainPort && isChannelConnected) {
+      // Use MessageChannel for decoupled communication
+      mainPort.postMessage(response);
+    } else {
+      // Fallback to direct worker communication
+      self.postMessage(response);
+    }
+  } catch (error) {
+    WorkerLogger.error('Failed to send response through MessageChannel:', error);
+    // Fallback to direct communication if MessageChannel fails
+    try {
+      self.postMessage(response);
+    } catch (fallbackError) {
+      WorkerLogger.error('Failed to send response through fallback method:', fallbackError);
+    }
   }
 }
 
+// 运用 MessageChannel 通信机制实现主线程与工作线程的解耦，确保复杂模型推理期间界面交互的流畅性
 // Set up MessageChannel when requested
 self.onmessage = (event: MessageEvent) => {
   // Check if this is a MessageChannel port setup message
   if (event.data.type === 'connect' && event.ports && event.ports.length > 0) {
     mainPort = event.ports[0];
-    WorkerLogger.info('MessageChannel connection established');
+    isChannelConnected = true;
+    WorkerLogger.info('MessageChannel connection established - 主线程与工作线程解耦完成');
 
-    // Set up message handler on the port
+    // Set up message handler on the port for decoupled communication
     mainPort.onmessage = handleMessage;
+
+    // Handle port close event
+    mainPort.onmessageerror = (error) => {
+      WorkerLogger.error('MessageChannel communication error:', error);
+      isChannelConnected = false;
+    };
 
     // Acknowledge the connection
     mainPort.postMessage({
       type: WorkerResponseType.READY,
-      payload: { status: 'connected' }
+      payload: {
+        status: 'connected',
+        channelReady: true,
+        workerCapabilities: {
+          supportsParallelProcessing: true,
+          maxConcurrentTranslations: 2,
+          supportedLanguages: ['en', 'zh', 'fr', 'de', 'es', 'ja', 'ko', 'ru']
+        }
+      }
     });
 
     return;
   }
 
-  // If not a port setup message, handle it directly
+  // If not a port setup message, handle it directly (fallback)
   handleMessage(event);
 };
 

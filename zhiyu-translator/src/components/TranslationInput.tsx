@@ -48,16 +48,7 @@ const TranslationInput: React.FC<TranslationInputProps> = ({
     }
   }, [autoFocus]);
 
-  // Create debounced onChange handler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedOnChange = useCallback(
-    debounce((newValue: string) => {
-      onChange(newValue);
-    }, debounceTime),
-    [onChange, debounceTime]
-  );
-
-  // Handle input change
+  // Handle input change directly without debounce for better responsiveness
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
 
@@ -66,14 +57,11 @@ const TranslationInput: React.FC<TranslationInputProps> = ({
       return;
     }
 
-    // Update the UI immediately for responsiveness
-    if (textareaRef.current) {
-      textareaRef.current.value = newValue;
-      autoResize();
-    }
+    // Update the state immediately for better responsiveness
+    onChange(newValue);
 
-    // Use debounced function for the actual state update
-    debouncedOnChange(newValue);
+    // Resize the textarea
+    autoResize();
   };
 
   // Calculate remaining characters if maxLength is defined

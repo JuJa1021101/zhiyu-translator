@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { AppState, TranslationOptions, TranslationServiceConfig } from '../types';
-import { SUPPORTED_LANGUAGES } from '../utils';
+import { AppState, TranslationServiceConfig } from '../types';
 import { translationReducer, initialState, TranslationAction } from './translationReducer';
 
 // Define the context type

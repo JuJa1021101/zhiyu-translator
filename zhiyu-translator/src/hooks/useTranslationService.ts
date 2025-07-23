@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { TranslationService } from '../services';
+import { YoudaoTranslationService } from '../services/YoudaoTranslationService';
 import { ProgressEvent, TranslationOptions } from '../types';
 import { useTranslationContext } from '../context/TranslationContext';
 
@@ -8,43 +8,66 @@ import { useTranslationContext } from '../context/TranslationContext';
  */
 export default function useTranslationService() {
   const { state, dispatch } = useTranslationContext();
-  const serviceRef = useRef<TranslationService | null>(null);
+  const serviceRef = useRef<YoudaoTranslationService | null>(null);
   const currentRequestId = useRef<string | null>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize the service
+  // Initialize the Youdao translation service
   useEffect(() => {
-    const service = new TranslationService(state.serviceConfig);
-    serviceRef.current = service;
+    let isMounted = true;
 
     const initService = async () => {
       try {
-        await service.initialize({
-          cacheModels: state.serviceConfig?.cacheModels,
-          quantized: state.serviceConfig?.useQuantized
+        console.log('Initializing Youdao translation service...');
+
+        // Create the Youdao translation service
+        const service = new YoudaoTranslationService();
+
+        if (!isMounted) return;
+        serviceRef.current = service;
+
+        // Set up progress callback
+        service.onProgress((event: ProgressEvent) => {
+          if (isMounted) {
+            dispatch({ type: 'SET_PROGRESS', payload: event.progress });
+          }
         });
-        dispatch({ type: 'SET_SERVICE_READY', payload: true });
+
+        // Initialize the service (fast initialization)
+        await service.initialize();
+
+        if (isMounted) {
+          console.log('Youdao translation service initialized successfully');
+          dispatch({ type: 'SET_SERVICE_READY', payload: true });
+        }
       } catch (err) {
-        console.error('Failed to initialize translation service:', err);
-        dispatch({ type: 'SET_ERROR', payload: 'Failed to initialize translation service' });
+        console.error('Failed to initialize Youdao translation service:', err);
+        if (isMounted) {
+          const errorMessage = err instanceof Error
+            ? `Translation service initialization failed: ${err.message}`
+            : 'Failed to initialize translation service';
+          dispatch({ type: 'SET_ERROR', payload: errorMessage });
+        }
       }
     };
 
     initService();
 
-    // Set up progress callback
-    service.onProgress((event: ProgressEvent) => {
-      dispatch({ type: 'SET_PROGRESS', payload: event.progress });
-    });
-
     // Clean up service on unmount
     return () => {
+      isMounted = false;
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
-      service.destroy();
+      if (serviceRef.current) {
+        try {
+          serviceRef.current.destroy();
+        } catch (err) {
+          console.error('Error destroying translation service:', err);
+        }
+      }
     };
-  }, []);
+  }, [dispatch]);
 
   // Auto-translate effect
   useEffect(() => {
@@ -87,7 +110,7 @@ export default function useTranslationService() {
 
     // Cancel any pending translation
     if (currentRequestId.current) {
-      await serviceRef.current.cancelTranslation(currentRequestId.current)
+      await serviceRef.current.cancelTranslation()
         .catch(console.error);
     }
 
@@ -97,34 +120,30 @@ export default function useTranslationService() {
     dispatch({ type: 'START_TRANSLATION' });
 
     try {
+      console.log('Using Youdao translation service for professional translation');
+
       const result = await serviceRef.current.translate(
         state.inputText,
         state.sourceLanguage,
-        state.targetLanguage,
-        {
-          ...options,
-          timeout: options?.timeout || state.serviceConfig?.timeout,
-        }
+        state.targetLanguage
       );
+
       dispatch({ type: 'FINISH_TRANSLATION', payload: result });
     } catch (err: any) {
       // Format error message for display
-      const errorMessage = err.type
-        ? err.message
-        : (err instanceof Error ? err.message : 'Translation failed');
-
+      const errorMessage = err instanceof Error ? err.message : 'Translation failed';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
       console.error('Translation error:', err);
     } finally {
       currentRequestId.current = null;
     }
-  }, [state.inputText, state.sourceLanguage, state.targetLanguage, state.isServiceReady, state.serviceConfig]);
+  }, [state.inputText, state.sourceLanguage, state.targetLanguage, state.isServiceReady]);
 
   // Cancel current translation
   const cancelTranslation = useCallback(async () => {
     if (currentRequestId.current && serviceRef.current) {
       try {
-        await serviceRef.current.cancelTranslation(currentRequestId.current);
+        await serviceRef.current.cancelTranslation();
         currentRequestId.current = null;
         dispatch({ type: 'CANCEL_TRANSLATION' });
       } catch (err) {
@@ -133,11 +152,9 @@ export default function useTranslationService() {
     }
   }, []);
 
-  // Update service configuration
+  // Update service configuration (simplified for modern service)
   const updateServiceConfig = useCallback((config: Partial<typeof state.serviceConfig>) => {
-    if (serviceRef.current) {
-      serviceRef.current.updateConfig(config);
-    }
+    // Modern service doesn't need complex configuration updates
     dispatch({ type: 'UPDATE_SERVICE_CONFIG', payload: config });
   }, []);
 

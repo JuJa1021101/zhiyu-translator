@@ -14,4 +14,5 @@ export interface ITranslationService {
 }
 
 export { default as TranslationService } from './TranslationService';
+export { default as YoudaoTranslationService } from './YoudaoTranslationService';
 export { ModelManager, getModelManager } from './ModelManager';

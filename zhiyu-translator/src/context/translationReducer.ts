@@ -1,5 +1,4 @@
-import { AppState, TranslationOptions, TranslationServiceConfig } from '../types';
-import { SUPPORTED_LANGUAGES } from '../utils';
+import { AppState, TranslationServiceConfig } from '../types';
 
 // Define the initial state
 export const initialState: AppState = {
