@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { AppState, TranslationServiceConfig } from '../types';
+import { AppState } from '../types';
 import { translationReducer, initialState, TranslationAction } from './translationReducer';
 
 // Define the context type
@@ -18,7 +18,6 @@ interface TranslationProviderProps {
     source: string;
     target: string;
   };
-  serviceConfig?: TranslationServiceConfig;
 }
 
 /**
@@ -26,15 +25,13 @@ interface TranslationProviderProps {
  */
 export const TranslationProvider: React.FC<TranslationProviderProps> = ({
   children,
-  initialLanguages,
-  serviceConfig
+  initialLanguages
 }) => {
   // Initialize state with custom initial languages if provided
   const customInitialState = {
     ...initialState,
     sourceLanguage: initialLanguages?.source || initialState.sourceLanguage,
-    targetLanguage: initialLanguages?.target || initialState.targetLanguage,
-    serviceConfig: serviceConfig || initialState.serviceConfig
+    targetLanguage: initialLanguages?.target || initialState.targetLanguage
   };
 
   // Create reducer

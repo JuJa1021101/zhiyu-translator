@@ -1,7 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LanguageSelectorProps } from '../types/components';
-import { formatLanguageName } from '../utils/languageUtils';
+import { Language } from '../types/languages';
 import './LanguageSelector.css';
+
+// LanguageSelector Props interface
+interface LanguageSelectorProps {
+  value: string;
+  onChange: (language: string) => void;
+  languages: Language[];
+  label: string;
+  disabled?: boolean;
+  className?: string;
+  placeholder?: string;
+  error?: string;
+  required?: boolean;
+  testId?: string;
+}
 
 /**
  * LanguageSelector component
@@ -15,7 +28,6 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   languages,
   label,
   disabled = false,
-  displayOptions = { showNativeName: true, showEnglishName: true, groupByRegion: false, showOnlySupported: false },
   className = '',
   placeholder = '选择语言...',
   error,
@@ -75,17 +87,13 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     setSearchTerm('');
   };
 
-  // Format language display based on options
-  const getLanguageDisplay = (lang: typeof languages[0]) => {
-    const { showNativeName, showEnglishName } = displayOptions;
-
-    if (showNativeName && showEnglishName) {
-      return formatLanguageName(lang, true);
-    } else if (showNativeName) {
-      return lang.nativeName;
-    } else {
-      return lang.name;
+  // Format language display
+  const getLanguageDisplay = (lang: Language) => {
+    // Show both native name and English name if they're different
+    if (lang.nativeName && lang.name !== lang.nativeName) {
+      return `${lang.name} (${lang.nativeName})`;
     }
+    return lang.name;
   };
 
   return (

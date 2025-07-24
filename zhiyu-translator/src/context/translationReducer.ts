@@ -1,4 +1,4 @@
-import { AppState, TranslationServiceConfig } from '../types';
+import { AppState } from '../types';
 
 // Define the initial state
 export const initialState: AppState = {
@@ -16,12 +16,6 @@ export const initialState: AppState = {
     useQuantized: true,
     cacheModels: true,
     theme: 'system'
-  },
-  serviceConfig: {
-    cacheModels: true,
-    useQuantized: true,
-    maxConcurrentTranslations: 1,
-    timeout: 60000
   }
 };
 
@@ -40,7 +34,7 @@ export type TranslationAction =
   | { type: 'CLEAR_ERROR' }
   | { type: 'SET_SERVICE_READY'; payload: boolean }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<AppState['settings']> }
-  | { type: 'UPDATE_SERVICE_CONFIG'; payload: Partial<TranslationServiceConfig> }
+  | { type: 'UPDATE_SERVICE_CONFIG'; payload: Partial<any> }
   | { type: 'RESTORE_STATE'; payload: Partial<AppState> }
   | { type: 'RESET_STATE' };
 
@@ -147,13 +141,8 @@ export function translationReducer(state: AppState, action: TranslationAction): 
       };
 
     case 'UPDATE_SERVICE_CONFIG':
-      return {
-        ...state,
-        serviceConfig: {
-          ...state.serviceConfig,
-          ...action.payload
-        }
-      };
+      // 服务配置已被移除，保持状态不变
+      return state;
 
     case 'RESTORE_STATE':
       return {

@@ -6,7 +6,6 @@ import { useTranslationService, useErrorHandler } from './hooks';
 import { AppState } from './types';
 import { SUPPORTED_LANGUAGES } from './types/languages';
 import { debounce } from './utils';
-import { measurePerformance } from './utils/performanceUtils';
 import { useKeyboardShortcuts, KeyboardShortcut } from './utils/keyboardUtils';
 
 // Import components directly to avoid lazy loading issues
@@ -15,7 +14,6 @@ import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 
 // Lazy load components for better performance
 const LanguageSelector = lazy(() => import('./components/LanguageSelector'));
-const ProgressIndicator = lazy(() => import('./components/ProgressIndicator'));
 const TranslationInput = lazy(() => import('./components/TranslationInput'));
 const TranslationOutput = lazy(() => import('./components/TranslationOutput'));
 const ErrorNotification = lazy(() => import('./components/ErrorNotification'));
@@ -112,20 +110,15 @@ const App: React.FC = () => {
   // Register keyboard shortcuts
   useKeyboardShortcuts(keyboardShortcuts);
 
-  // Initialize app and measure performance
+  // Initialize app
   useEffect(() => {
     const initApp = async () => {
       try {
-        const perfMark = measurePerformance('app-initialization');
-
         // Simulate initialization tasks
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Mark initialization as complete
         setIsInitializing(false);
-
-        perfMark.end();
-        console.info(`App initialized in ${perfMark.duration}ms`);
       } catch (error) {
         console.error('App initialization error:', error);
         reportError(new Error('Failed to initialize application'));

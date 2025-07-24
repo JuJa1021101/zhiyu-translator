@@ -5,10 +5,6 @@ import './themes.css'
 import App from './App'
 import { TranslationProvider } from './context/TranslationContext'
 import { ErrorBoundary } from './components'
-import { measurePerformance } from './utils/performanceUtils'
-
-// Start performance measurement for initial load
-const initialLoadMark = measurePerformance('initial-app-load');
 
 // Register service worker for offline capabilities
 const registerServiceWorker = async () => {
@@ -60,9 +56,7 @@ const initializeApp = () => {
     </StrictMode>
   );
 
-  // End performance measurement
-  initialLoadMark.end();
-  console.info(`App initial load completed in ${initialLoadMark.duration}ms`);
+  console.info('App initialized successfully');
 };
 
 // Start the application

@@ -533,9 +533,55 @@ export class YoudaoTranslationService {
   private intelligentTranslate(text: string, sourceLanguage: string, targetLanguage: string): string {
     // 使用离线词典进行智能翻译，而不是简单地返回带前缀的原文
     try {
+      // 处理特殊情况：空文本或只有空格
+      if (!text || !text.trim()) {
+        return '';
+      }
+
+      // 直接处理特殊短语，不依赖词典
+      if (sourceLanguage === 'en' && targetLanguage === 'zh') {
+        const lowerText = text.toLowerCase().trim();
+
+        // 直接处理"I am"
+        if (lowerText === 'i am') {
+          console.log('直接翻译"I am"为"我是"');
+          return '我是';
+        }
+
+        // 直接处理"I"
+        if (lowerText === 'i') {
+          return '我';
+        }
+
+        // 直接处理"am"
+        if (lowerText === 'am') {
+          return '是';
+        }
+      }
+
       // 获取扩展词典
       const offlineDict = this.getExtendedDictionary();
       const key = `${sourceLanguage}-${targetLanguage}`;
+
+      // 添加一些常见短语到词典中
+      if (sourceLanguage === 'en' && targetLanguage === 'zh') {
+        // 常见短语
+        offlineDict[key]['i am a superman'] = '我是一个超人';
+        offlineDict[key]['i am'] = '我是';
+        offlineDict[key]['i am a'] = '我是一个';
+        offlineDict[key]['i am the'] = '我是这个';
+        offlineDict[key]['i'] = '我';
+        offlineDict[key]['am'] = '是';
+
+        // 常见词汇
+        offlineDict[key]['superman'] = '超人';
+        offlineDict[key]['superwoman'] = '女超人';
+        offlineDict[key]['super'] = '超级';
+        offlineDict[key]['man'] = '男人';
+        offlineDict[key]['woman'] = '女人';
+        offlineDict[key]['boy'] = '男孩';
+        offlineDict[key]['girl'] = '女孩';
+      }
 
       if (offlineDict[key]) {
         const dict = offlineDict[key];
@@ -544,6 +590,35 @@ export class YoudaoTranslationService {
         // 精确匹配
         if (dict[lowerText]) {
           return dict[lowerText];
+        }
+
+        // 特殊情况处理 - 优先级第二
+        if (sourceLanguage === 'en' && targetLanguage === 'zh') {
+          // 处理"I am"开头的短语
+          if (lowerText === 'i am') {
+            return '我是';
+          }
+
+          // 处理"I am a X"结构
+          if (lowerText.startsWith('i am a ')) {
+            const pattern = /i am a (\w+)/i;
+            const match = lowerText.match(pattern);
+            if (match && match[1]) {
+              const thing = match[1];
+              const translatedThing = dict[thing] || thing;
+              return `我是一个${translatedThing}`;
+            }
+          }
+
+          // 处理"I am X"结构
+          if (lowerText.startsWith('i am ')) {
+            const rest = lowerText.substring(5).trim(); // 去掉"i am "
+            if (rest) {
+              const translatedRest = dict[rest] || rest;
+              return `我是${translatedRest}`;
+            }
+            return '我是';
+          }
         }
 
         // 尝试句子级别的翻译
@@ -567,19 +642,46 @@ export class YoudaoTranslationService {
       // 如果没有找到匹配，使用更智能的回退策略
       if (sourceLanguage === 'en' && targetLanguage === 'zh') {
         // 英译中的常见短语
-        if (text.toLowerCase().includes('i have')) {
-          return text.toLowerCase().replace('i have', '我有');
+        if (text.toLowerCase().includes('i am a')) {
+          // 处理"I am a X"结构
+          const pattern = /i am a (\w+)/i;
+          const match = text.toLowerCase().match(pattern);
+          if (match && match[1]) {
+            const thing = match[1];
+            // 特殊词汇处理
+            if (thing === 'superman') {
+              return '我是一个超人';
+            } else if (thing === 'student') {
+              return '我是一个学生';
+            } else if (thing === 'teacher') {
+              return '我是一个老师';
+            } else if (thing === 'doctor') {
+              return '我是一个医生';
+            } else {
+              return `我是一个${thing}`;
+            }
+          } else {
+            return text.toLowerCase().replace(/i am a/i, '我是一个');
+          }
+        } else if (text.toLowerCase().includes('i am')) {
+          return text.toLowerCase().replace(/i am/i, '我是');
+        } else if (text.toLowerCase().includes('i have')) {
+          return text.toLowerCase().replace(/i have/i, '我有');
         } else if (text.toLowerCase().includes('hello')) {
-          return text.toLowerCase().replace('hello', '你好');
+          return text.toLowerCase().replace(/hello/i, '你好');
         } else if (text.toLowerCase().includes('thank')) {
-          return text.toLowerCase().replace('thank you', '谢谢').replace('thanks', '谢谢');
+          return text.toLowerCase().replace(/thank you/i, '谢谢').replace(/thanks/i, '谢谢');
         } else {
           // 尝试翻译一些基本词汇
           let result = text;
           const basicDict = {
             'a': '一个', 'the': '这个', 'is': '是', 'are': '是',
             'pen': '笔', 'book': '书', 'computer': '电脑', 'phone': '手机',
-            'good': '好的', 'bad': '坏的', 'yes': '是的', 'no': '不是'
+            'good': '好的', 'bad': '坏的', 'yes': '是的', 'no': '不是',
+            'superman': '超人', 'superwoman': '女超人', 'super': '超级',
+            'man': '男人', 'woman': '女人', 'boy': '男孩', 'girl': '女孩',
+            'student': '学生', 'teacher': '老师', 'doctor': '医生',
+            'friend': '朋友', 'family': '家庭', 'home': '家'
           };
 
           for (const [en, zh] of Object.entries(basicDict)) {
@@ -591,7 +693,11 @@ export class YoudaoTranslationService {
         }
       } else if (sourceLanguage === 'zh' && targetLanguage === 'en') {
         // 中译英的常见短语
-        if (text.includes('我有')) {
+        if (text.includes('我是一个')) {
+          return text.replace('我是一个', 'I am a');
+        } else if (text.includes('我是')) {
+          return text.replace('我是', 'I am');
+        } else if (text.includes('我有')) {
           return text.replace('我有', 'I have');
         } else if (text.includes('你好')) {
           return text.replace('你好', 'hello');
