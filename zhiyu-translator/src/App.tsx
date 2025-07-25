@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, lazy, Suspense, useState } from 'react';
 import './App.css';
 import { ErrorBoundary } from './components';
-import { useTranslationContext } from './context/TranslationContext';
+import { useTranslationContext } from './context';
 import { useTranslationService, useErrorHandler } from './hooks';
 import { AppState } from './types';
 import { SUPPORTED_LANGUAGES } from './types/languages';
-import { debounce } from './utils';
 import { useKeyboardShortcuts, KeyboardShortcut } from './utils/keyboardUtils';
 
 // Import components directly to avoid lazy loading issues
@@ -37,7 +36,6 @@ const App: React.FC = () => {
     inputText,
     translatedText,
     isTranslating,
-    progress,
     error: contextError,
     settings
   } = state as AppState;

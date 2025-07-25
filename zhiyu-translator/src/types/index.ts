@@ -1,5 +1,4 @@
 // Re-export all types from their respective files
-export * from './errors';
 export * from './languages';
 
 // Core application types

@@ -41,9 +41,8 @@ export class YoudaoTranslationService {
   async initialize(): Promise<void> {
     this.reportProgress(0, '正在初始化有道智云翻译服务...');
 
-    // 检查网络连接和API可用性
+    // 直接标记为已初始化，避免不必要的网络请求
     try {
-      await this.testConnection();
       this.reportProgress(100, '有道智云翻译服务已就绪');
       this.isInitialized = true;
     } catch (error) {
@@ -732,21 +731,7 @@ export class YoudaoTranslationService {
     }
   }
 
-  /**
-   * 测试API连接
-   */
-  private async testConnection(): Promise<void> {
-    // 简单的连接测试
-    try {
-      await fetch('https://openapi.youdao.com', {
-        method: 'HEAD',
-        mode: 'no-cors'
-      });
-      // 如果没有抛出错误，说明网络连接正常
-    } catch (error) {
-      throw new Error('网络连接失败');
-    }
-  }
+
 
   /**
    * 获取错误信息

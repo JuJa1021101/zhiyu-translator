@@ -1,122 +1,81 @@
-import {
-  TranslationError,
-  TranslationErrorType,
-  ErrorSeverity,
-  TranslationException
-} from '../types/errors';
+import { TranslationError, TranslationErrorType, ErrorContext } from '../types/errors';
 
 /**
- * Create a translation error object
- * @param type Error type
- * @param message Error message
- * @param details Additional error details
- * @returns TranslationError object
+ * Creates a TranslationError instance
  */
 export function createTranslationError(
   type: TranslationErrorType,
   message: string,
-  details?: any
+  context?: ErrorContext,
+  code?: string
 ): TranslationError {
-  return {
-    type,
-    message,
-    details,
-    timestamp: Date.now(),
-    recoverable: isErrorRecoverable(type)
-  };
+  const error = new Error(message) as TranslationError;
+
+  error.type = type;
+  error.code = code;
+  error.details = context;
+  error.timestamp = new Date();
+  error.retryable = isRetryableError(type);
+
+  return error;
 }
 
 /**
- * Determine if an error is recoverable
- * @param errorType Error type
- * @returns Boolean indicating if the error is recoverable
+ * Determines if an error type is retryable
  */
-export function isErrorRecoverable(errorType: TranslationErrorType): boolean {
-  // Define which error types are recoverable
-  const recoverableErrors = [
-    TranslationErrorType.NETWORK_ERROR,
-    TranslationErrorType.TRANSLATION_TIMEOUT,
-    TranslationErrorType.WORKER_ERROR
-  ];
-
-  return recoverableErrors.includes(errorType);
+export function isRetryableError(type: TranslationErrorType): boolean {
+  switch (type) {
+    case TranslationErrorType.NETWORK_ERROR:
+    case TranslationErrorType.TIMEOUT_ERROR:
+    case TranslationErrorType.RATE_LIMIT_ERROR:
+      return true;
+    case TranslationErrorType.API_ERROR:
+    case TranslationErrorType.VALIDATION_ERROR:
+    case TranslationErrorType.INTERNAL_ERROR:
+    case TranslationErrorType.AUTHENTICATION_ERROR:
+    case TranslationErrorType.UNSUPPORTED_LANGUAGE:
+      return false;
+    default:
+      return false;
+  }
 }
 
 /**
- * Get error severity based on error type
- * @param errorType Error type
- * @returns Error severity level
- */
-export function getErrorSeverity(errorType: TranslationErrorType): ErrorSeverity {
-  // Critical errors
-  if ([
-    TranslationErrorType.MODEL_INITIALIZATION_FAILED,
-    TranslationErrorType.WORKER_INITIALIZATION_FAILED,
-    TranslationErrorType.INTERNAL_ERROR
-  ].includes(errorType)) {
-    return ErrorSeverity.CRITICAL;
-  }
-
-  // Warning level errors
-  if ([
-    TranslationErrorType.TRANSLATION_TIMEOUT,
-    TranslationErrorType.NETWORK_ERROR
-  ].includes(errorType)) {
-    return ErrorSeverity.WARNING;
-  }
-
-  // Default to standard error
-  return ErrorSeverity.ERROR;
-}
-
-/**
- * Format error message for user display
- * @param error Translation error
- * @returns User-friendly error message
+ * Formats error message for display
  */
 export function formatErrorMessage(error: TranslationError): string {
-  // Map technical error types to user-friendly messages
-  const errorMessages: Record<TranslationErrorType, string> = {
-    [TranslationErrorType.MODEL_LOAD_FAILED]: 'Failed to load translation model',
-    [TranslationErrorType.MODEL_NOT_FOUND]: 'Translation model not found',
-    [TranslationErrorType.MODEL_INITIALIZATION_FAILED]: 'Could not initialize translation model',
-    [TranslationErrorType.TRANSLATION_FAILED]: 'Translation failed',
-    [TranslationErrorType.TRANSLATION_TIMEOUT]: 'Translation timed out',
-    [TranslationErrorType.INVALID_INPUT]: 'Invalid input text',
-    [TranslationErrorType.UNSUPPORTED_LANGUAGE_PAIR]: 'This language pair is not supported',
-    [TranslationErrorType.WORKER_ERROR]: 'Worker process error',
-    [TranslationErrorType.WORKER_INITIALIZATION_FAILED]: 'Failed to start translation service',
-    [TranslationErrorType.WORKER_COMMUNICATION_ERROR]: 'Communication error with translation service',
-    [TranslationErrorType.NETWORK_ERROR]: 'Network error',
-    [TranslationErrorType.MODEL_DOWNLOAD_FAILED]: 'Failed to download translation model',
-    [TranslationErrorType.UNKNOWN_ERROR]: 'Unknown error occurred',
-    [TranslationErrorType.INTERNAL_ERROR]: 'Internal application error'
-  };
-
-  return errorMessages[error.type] || error.message;
+  switch (error.type) {
+    case TranslationErrorType.NETWORK_ERROR:
+      return '网络连接错误，请检查网络连接后重试';
+    case TranslationErrorType.API_ERROR:
+      return `API错误: ${error.message}`;
+    case TranslationErrorType.VALIDATION_ERROR:
+      return `输入验证错误: ${error.message}`;
+    case TranslationErrorType.TIMEOUT_ERROR:
+      return '请求超时，请重试';
+    case TranslationErrorType.RATE_LIMIT_ERROR:
+      return '请求过于频繁，请稍后再试';
+    case TranslationErrorType.AUTHENTICATION_ERROR:
+      return '身份验证失败，请检查API密钥';
+    case TranslationErrorType.UNSUPPORTED_LANGUAGE:
+      return '不支持的语言';
+    case TranslationErrorType.INTERNAL_ERROR:
+    default:
+      return `内部错误: ${error.message}`;
+  }
 }
 
 /**
- * Handle and log translation errors
- * @param error Error object
- * @param logToConsole Whether to log to console
+ * Logs error with context
  */
-export function handleTranslationError(error: TranslationError | Error, logToConsole: boolean = true): TranslationError {
-  // Convert standard Error to TranslationError if needed
-  const translationError = error instanceof Error && !(error instanceof TranslationException)
-    ? createTranslationError(
-      TranslationErrorType.UNKNOWN_ERROR,
-      error.message,
-      { stack: error.stack }
-    )
-    : error as TranslationError;
-
-  if (logToConsole) {
-    console.error(
-      `Translation Error [${translationError.type}]: ${translationError.message}`,
-      translationError.details
-    );
-  }
-
-  return translationError;
+export function logError(error: TranslationError, context?: Record<string, any>): void {
+  console.error('Translation Error:', {
+    type: error.type,
+    message: error.message,
+    code: error.code,
+    timestamp: error.timestamp,
+    retryable: error.retryable,
+    details: error.details,
+    context
+  });
 }

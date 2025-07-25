@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { TranslationError } from '../types/errors';
-import { getErrorSeverity, isErrorRecoverable, formatErrorMessage } from '../utils/errorUtils';
 import './ErrorNotification.css';
 
 interface ErrorNotificationProps {
-  error: TranslationError | null;
+  error: Error | null;
   onDismiss: () => void;
   onRetry?: () => void;
   autoHideDuration?: number;
@@ -46,25 +44,24 @@ const ErrorNotification: React.FC<ErrorNotificationProps> = ({
 
   if (!error) return null;
 
-  const severity = getErrorSeverity(error.type);
-  const isRecoverable = isErrorRecoverable(error.type);
-  const message = formatErrorMessage(error);
+  // Simplified error handling - treat all errors as recoverable
+  const message = error.message || '发生了未知错误';
 
   return (
     <div
-      className={`error-notification ${severity} ${visible ? 'visible' : 'hidden'}`}
+      className={`error-notification error ${visible ? 'visible' : 'hidden'}`}
       role="alert"
       aria-live="assertive"
     >
       <div className="error-notification-content">
         <div className="error-notification-icon">
-          {severity === 'critical' ? '⚠️' : severity === 'warning' ? '⚠' : 'ℹ️'}
+          ⚠️
         </div>
         <div className="error-notification-message">
           {message}
         </div>
         <div className="error-notification-actions">
-          {isRecoverable && onRetry && (
+          {onRetry && (
             <button
               className="error-notification-retry"
               onClick={onRetry}

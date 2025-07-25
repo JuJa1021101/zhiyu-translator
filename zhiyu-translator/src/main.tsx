@@ -6,19 +6,7 @@ import App from './App'
 import { TranslationProvider } from './context/TranslationContext'
 import { ErrorBoundary } from './components'
 
-// Register service worker for offline capabilities
-const registerServiceWorker = async () => {
-  if ('serviceWorker' in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register('/serviceWorker.js', {
-        scope: '/'
-      });
-      console.info('Service worker registered:', registration);
-    } catch (error) {
-      console.error('Service worker registration failed:', error);
-    }
-  }
-};
+
 
 // Root error handler for uncaught errors
 const handleRootError = (error: any) => {
@@ -61,6 +49,3 @@ const initializeApp = () => {
 
 // Start the application
 initializeApp();
-
-// Register service worker after app is loaded
-registerServiceWorker().catch(console.error);

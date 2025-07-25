@@ -1,39 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TranslationError } from '../types/errors';
-import ErrorService from '../services/ErrorService';
 
 /**
- * Hook for handling errors using the ErrorService
+ * Hook for handling errors with simple state management
  * @param autoHideDuration Optional duration in ms to automatically hide errors
  * @returns Object with error state and error handling functions
  */
 export function useErrorHandler(autoHideDuration?: number) {
-  const [currentError, setCurrentError] = useState<TranslationError | null>(null);
-  const [errorQueue, setErrorQueue] = useState<TranslationError[]>([]);
-  const errorService = ErrorService.getInstance();
+  const [currentError, setCurrentError] = useState<Error | null>(null);
+  const [errorHistory, setErrorHistory] = useState<Error[]>([]);
 
-  // Handle new errors
-  const handleError = useCallback((error: TranslationError) => {
-    setErrorQueue(prev => [...prev, error]);
-  }, []);
-
-  // Process error queue
+  // Auto-hide error after specified duration
   useEffect(() => {
-    if (errorQueue.length > 0 && !currentError) {
-      // Take the first error from the queue
-      const nextError = errorQueue[0];
-      setCurrentError(nextError);
+    if (currentError && autoHideDuration) {
+      const timer = setTimeout(() => {
+        setCurrentError(null);
+      }, autoHideDuration);
 
-      // Remove the processed error from the queue
-      setErrorQueue(prev => prev.slice(1));
+      return () => clearTimeout(timer);
     }
-  }, [errorQueue, currentError]);
-
-  // Subscribe to error service
-  useEffect(() => {
-    const unsubscribe = errorService.subscribe(handleError);
-    return unsubscribe;
-  }, [errorService, handleError]);
+  }, [currentError, autoHideDuration]);
 
   // Clear current error
   const clearError = useCallback(() => {
@@ -41,22 +26,24 @@ export function useErrorHandler(autoHideDuration?: number) {
   }, []);
 
   // Report a new error
-  const reportError = useCallback((error: Error | TranslationError) => {
-    errorService.reportError(error);
-  }, [errorService]);
+  const reportError = useCallback((error: Error) => {
+    console.error('Error reported:', error);
+    setCurrentError(error);
+
+    // Add to history (keep last 10 errors)
+    setErrorHistory(prev => [error, ...prev.slice(0, 9)]);
+  }, []);
 
   // Get error history
   const getErrorHistory = useCallback(() => {
-    return errorService.getErrorHistory();
-  }, [errorService]);
+    return errorHistory;
+  }, [errorHistory]);
 
   return {
     error: currentError,
     clearError,
     reportError,
     getErrorHistory,
-    hasQueuedErrors: errorQueue.length > 0,
-    queueLength: errorQueue.length,
     autoHideDuration
   };
 }
